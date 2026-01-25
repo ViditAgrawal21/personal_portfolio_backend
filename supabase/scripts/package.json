@@ -1,0 +1,11 @@
+{
+  "name": "supabase-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for Supabase setup",
+  "scripts": {
+    "generate-hash": "node generate-admin-hash.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1"
+  }
+}

@@ -1,0 +1,315 @@
+import { config } from '../config';
+import { logger } from '../utils/logger';
+
+interface InquiryData {
+  id: string;
+  clientName: string;
+  email: string;
+  serviceType: string;
+  budgetRange?: string | null;
+  requirements: string;
+  createdAt: Date;
+}
+
+interface HireRequestData {
+  id: string;
+  projectName: string;
+  techStack: any;
+  email: string;
+  message: string;
+  createdAt: Date;
+}
+
+export const sendInquiryNotification = async (
+  inquiry: InquiryData
+): Promise<void> => {
+  const promises: Promise<void>[] = [];
+
+  // Send Email
+  if (config.email.resendApiKey) {
+    promises.push(sendInquiryEmail(inquiry));
+  }
+
+  // Send Slack Notification
+  if (config.slack.webhookUrl) {
+    promises.push(sendInquirySlack(inquiry));
+  }
+
+  await Promise.allSettled(promises);
+};
+
+export const sendHireRequestNotification = async (
+  request: HireRequestData
+): Promise<void> => {
+  const promises: Promise<void>[] = [];
+
+  // Send Email
+  if (config.email.resendApiKey) {
+    promises.push(sendHireRequestEmail(request));
+  }
+
+  // Send Slack Notification
+  if (config.slack.webhookUrl) {
+    promises.push(sendHireRequestSlack(request));
+  }
+
+  await Promise.allSettled(promises);
+};
+
+async function sendInquiryEmail(inquiry: InquiryData): Promise<void> {
+  try {
+    const emailBody = `
+      <h2>New Service Inquiry Received</h2>
+      <p><strong>Client Name:</strong> ${inquiry.clientName}</p>
+      <p><strong>Email:</strong> ${inquiry.email}</p>
+      <p><strong>Service Type:</strong> ${inquiry.serviceType}</p>
+      <p><strong>Budget Range:</strong> ${inquiry.budgetRange || 'Not specified'}</p>
+      <p><strong>Requirements:</strong></p>
+      <p>${inquiry.requirements}</p>
+      <p><strong>Received:</strong> ${inquiry.createdAt.toLocaleString()}</p>
+    `;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.email.resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: 'Portfolio <noreply@portfolio.com>',
+        to: config.email.adminEmail,
+        subject: `New Service Inquiry from ${inquiry.clientName}`,
+        html: emailBody,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API responded with ${response.status}`);
+    }
+
+    logger.info('Inquiry email sent successfully', { inquiryId: inquiry.id });
+  } catch (error) {
+    logger.error('Failed to send inquiry email:', error);
+    throw error;
+  }
+}
+
+async function sendInquirySlack(inquiry: InquiryData): Promise<void> {
+  try {
+    const message = {
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🆕 New Service Inquiry',
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Client:*\n${inquiry.clientName}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Email:*\n${inquiry.email}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Service:*\n${inquiry.serviceType}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Budget:*\n${inquiry.budgetRange || 'Not specified'}`,
+            },
+          ],
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Requirements:*\n${inquiry.requirements}`,
+          },
+        },
+      ],
+    };
+
+    const response = await fetch(config.slack.webhookUrl!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Slack API responded with ${response.status}`);
+    }
+
+    logger.info('Inquiry Slack notification sent', { inquiryId: inquiry.id });
+  } catch (error) {
+    logger.error('Failed to send inquiry Slack notification:', error);
+    throw error;
+  }
+}
+
+async function sendHireRequestEmail(request: HireRequestData): Promise<void> {
+  try {
+    const techStack = Array.isArray(request.techStack)
+      ? request.techStack.join(', ')
+      : JSON.stringify(request.techStack);
+
+    const emailBody = `
+      <h2>🚀 New Hire Request Received</h2>
+      <p><strong>Project Name:</strong> ${request.projectName}</p>
+      <p><strong>Email:</strong> ${request.email}</p>
+      <p><strong>Tech Stack:</strong> ${techStack}</p>
+      <p><strong>Message:</strong></p>
+      <p>${request.message}</p>
+      <p><strong>Received:</strong> ${request.createdAt.toLocaleString()}</p>
+    `;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.email.resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: 'Portfolio <noreply@portfolio.com>',
+        to: config.email.adminEmail,
+        subject: `New Hire Request: ${request.projectName}`,
+        html: emailBody,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API responded with ${response.status}`);
+    }
+
+    logger.info('Hire request email sent successfully', { requestId: request.id });
+  } catch (error) {
+    logger.error('Failed to send hire request email:', error);
+    throw error;
+  }
+}
+
+async function sendHireRequestSlack(request: HireRequestData): Promise<void> {
+  try {
+    const techStack = Array.isArray(request.techStack)
+      ? request.techStack.map((tech) => `\`${tech}\``).join(', ')
+      : JSON.stringify(request.techStack);
+
+    const message = {
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🚀 New Hire Request',
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Project:*\n${request.projectName}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Email:*\n${request.email}`,
+            },
+          ],
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Tech Stack:*\n${techStack}`,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Message:*\n${request.message}`,
+          },
+        },
+      ],
+    };
+
+    const response = await fetch(config.slack.webhookUrl!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Slack API responded with ${response.status}`);
+    }
+
+    logger.info('Hire request Slack notification sent', { requestId: request.id });
+  } catch (error) {
+    logger.error('Failed to send hire request Slack notification:', error);
+    throw error;
+  }
+}
+
+// =====================================================
+// REPLY EMAIL FUNCTIONS
+// =====================================================
+
+interface ReplyEmailData {
+  to: string;
+  subject: string;
+  message: string;
+  clientName: string;
+}
+
+export const sendReplyEmail = async (data: ReplyEmailData): Promise<void> => {
+  if (!config.email.resendApiKey) {
+    throw new Error('Email service not configured');
+  }
+
+  try {
+    const emailBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <p>Hi ${data.clientName},</p>
+        <div style="margin: 20px 0; line-height: 1.6;">
+          ${data.message.split('\n').map(line => `<p>${line}</p>`).join('')}
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+        <p style="color: #666; font-size: 12px;">
+          This email was sent from your portfolio admin panel.
+        </p>
+      </div>
+    `;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.email.resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: `Portfolio <${config.email.adminEmail}>`,
+        to: data.to,
+        subject: data.subject,
+        html: emailBody,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Email API error: ${JSON.stringify(errorData)}`);
+    }
+
+    logger.info('Reply email sent successfully', { to: data.to });
+  } catch (error) {
+    logger.error('Failed to send reply email:', error);
+    throw error;
+  }
+};
