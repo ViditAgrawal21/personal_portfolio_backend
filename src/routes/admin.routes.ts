@@ -25,6 +25,7 @@ import {
   sendHireRequestReply,
   upload,
   uploadFile,
+  updateAvailabilityStatus,
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -84,6 +85,14 @@ router.post(
   authorize('SUPER_ADMIN', 'ADMIN'),
   upload.single('file'),
   uploadFile
+);
+
+// Admin - Update Availability Status
+router.patch(
+  '/availability',
+  authenticate,
+  authorize('SUPER_ADMIN', 'ADMIN'),
+  updateAvailabilityStatus
 );
 
 export default router;

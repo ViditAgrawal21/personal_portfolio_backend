@@ -107,6 +107,9 @@ model About {
   twitterUrl      String?  @map("twitter_url") @db.Text
   profileImageUrl String?  @map("profile_image_url") @db.Text
   yearsOfExp      Int?     @default(0) @map("years_of_experience")
+  isAvailable     Boolean  @default(true) @map("is_available")
+  availabilityStatus String? @default("Open to opportunities") @map("availability_status") @db.VarChar(255)
+  hourlyRate      String?  @map("hourly_rate") @db.VarChar(50)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

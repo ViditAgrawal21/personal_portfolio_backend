@@ -834,3 +834,51 @@ export const uploadFile = async (
     res.status(500).json({ success: false, error: 'Failed to upload file' });
   }
 };
+
+// Update Availability Status
+export const updateAvailabilityStatus = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { isAvailable, availabilityStatus, hourlyRate } = req.body;
+
+    const about = await prisma.about.findFirst();
+    
+    if (!about) {
+      res.status(404).json({ 
+        success: false, 
+        error: 'Profile not found' 
+      });
+      return;
+    }
+
+    const updatedAbout = await prisma.about.update({
+      where: { id: about.id },
+      data: {
+        ...(isAvailable !== undefined && { isAvailable }),
+        ...(availabilityStatus !== undefined && { availabilityStatus }),
+        ...(hourlyRate !== undefined && { hourlyRate }),
+        updatedAt: new Date(),
+      },
+    });
+
+    logger.info('Availability status updated', {
+      isAvailable,
+      availabilityStatus,
+      hourlyRate,
+      updatedBy: req.user?.email,
+    });
+
+    res.json({
+      success: true,
+      data: updatedAbout,
+    });
+  } catch (error) {
+    logger.error('Error updating availability status:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update availability status' 
+    });
+  }
+};

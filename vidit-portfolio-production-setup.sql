@@ -32,6 +32,9 @@ INSERT INTO about (
   github_url,
   linkedin_url,
   years_of_experience,
+  is_available,
+  availability_status,
+  hourly_rate,
   created_at,
   updated_at
 ) VALUES (
@@ -45,6 +48,9 @@ INSERT INTO about (
   'https://github.com/ViditAgrawal21',
   'https://linkedin.com/in/vidit-agrawal',
   3,
+  true,
+  'Available for projects',
+  '$25-50/hour',
   NOW(),
   NOW()
 );
