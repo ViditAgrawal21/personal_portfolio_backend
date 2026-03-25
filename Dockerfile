@@ -1,6 +1,9 @@
 # ---- Build Stage ----
 FROM node:20-alpine AS builder
 
+# Install OpenSSL 3 compatibility for Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy dependency files first for better layer caching
@@ -22,6 +25,9 @@ RUN npm run build
 
 # ---- Production Stage ----
 FROM node:20-alpine AS production
+
+# Install OpenSSL 3 compatibility for Prisma
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
