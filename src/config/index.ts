@@ -25,7 +25,15 @@ export const config = {
 
   // CORS
   cors: {
-    allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3000',
+      'http://localhost:3001', 
+      'http://localhost:5173', // Vite default
+      'http://localhost:8080', // Vue/Nuxt default
+      'http://localhost:4200', // Angular default
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
+    ],
   },
 
   // Rate Limiting
