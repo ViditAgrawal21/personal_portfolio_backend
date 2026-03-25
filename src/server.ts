@@ -5,17 +5,21 @@ import prisma from './config/database';
 
 const startServer = async () => {
   try {
-    // Test database connection
-    await prisma.$connect();
-    logger.info('Database connected successfully');
-
-    // Start server
+    // Start server FIRST so Cloud Run sees the port is open
     const server = app.listen(config.port, () => {
       logger.info(`Server running in ${config.nodeEnv} mode on port ${config.port}`);
       logger.info(`Health check: http://localhost:${config.port}/health`);
       logger.info(`Public API: http://localhost:${config.port}/api`);
       logger.info(`Admin API: http://localhost:${config.port}/api/admin`);
     });
+
+    // Then connect to the database
+    try {
+      await prisma.$connect();
+      logger.info('Database connected successfully');
+    } catch (dbError) {
+      logger.error('Database connection failed:', dbError);
+    }
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
