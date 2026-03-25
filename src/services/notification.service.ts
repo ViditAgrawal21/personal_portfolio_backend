@@ -5,17 +5,23 @@ interface InquiryData {
   id: string;
   clientName: string;
   email: string;
-  serviceType: string;
+  serviceType?: string | null;
+  companyName?: string | null;
+  phoneNumber?: string | null;
   budgetRange?: string | null;
-  requirements: string;
+  timeline?: string | null;
+  projectDetails: string | null;
   createdAt: Date;
 }
 
 interface HireRequestData {
   id: string;
-  projectName: string;
-  techStack: any;
+  candidateName: string | null;
   email: string;
+  companyName: string | null;
+  roleType: string | null;
+  salaryOffer?: string | null;
+  location?: string | null;
   message: string;
   createdAt: Date;
 }
@@ -62,10 +68,13 @@ async function sendInquiryEmail(inquiry: InquiryData): Promise<void> {
       <h2>New Service Inquiry Received</h2>
       <p><strong>Client Name:</strong> ${inquiry.clientName}</p>
       <p><strong>Email:</strong> ${inquiry.email}</p>
-      <p><strong>Service Type:</strong> ${inquiry.serviceType}</p>
+      <p><strong>Service Type:</strong> ${inquiry.serviceType || 'Not specified'}</p>
+      <p><strong>Company:</strong> ${inquiry.companyName || 'Not specified'}</p>
+      <p><strong>Phone:</strong> ${inquiry.phoneNumber || 'Not specified'}</p>
       <p><strong>Budget Range:</strong> ${inquiry.budgetRange || 'Not specified'}</p>
-      <p><strong>Requirements:</strong></p>
-      <p>${inquiry.requirements}</p>
+      <p><strong>Timeline:</strong> ${inquiry.timeline || 'Not specified'}</p>
+      <p><strong>Project Details:</strong></p>
+      <p>${inquiry.projectDetails || 'Not specified'}</p>
       <p><strong>Received:</strong> ${inquiry.createdAt.toLocaleString()}</p>
     `;
 
@@ -119,11 +128,28 @@ async function sendInquirySlack(inquiry: InquiryData): Promise<void> {
             },
             {
               type: 'mrkdwn',
-              text: `*Service:*\n${inquiry.serviceType}`,
+              text: `*Service Type:*\n${inquiry.serviceType || 'Not specified'}`,
             },
             {
               type: 'mrkdwn',
+              text: `*Company:*\n${inquiry.companyName || 'Not specified'}`,
+            },
+          ],
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
               text: `*Budget:*\n${inquiry.budgetRange || 'Not specified'}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Phone:*\n${inquiry.phoneNumber || 'Not specified'}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Timeline:*\n${inquiry.timeline || 'Not specified'}`,
             },
           ],
         },
@@ -131,7 +157,7 @@ async function sendInquirySlack(inquiry: InquiryData): Promise<void> {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Requirements:*\n${inquiry.requirements}`,
+            text: `*Project Details:*\n${inquiry.projectDetails || 'Not specified'}`,
           },
         },
       ],
@@ -156,15 +182,14 @@ async function sendInquirySlack(inquiry: InquiryData): Promise<void> {
 
 async function sendHireRequestEmail(request: HireRequestData): Promise<void> {
   try {
-    const techStack = Array.isArray(request.techStack)
-      ? request.techStack.join(', ')
-      : JSON.stringify(request.techStack);
-
     const emailBody = `
       <h2>🚀 New Hire Request Received</h2>
-      <p><strong>Project Name:</strong> ${request.projectName}</p>
+      <p><strong>Candidate Name:</strong> ${request.candidateName || 'Not specified'}</p>
       <p><strong>Email:</strong> ${request.email}</p>
-      <p><strong>Tech Stack:</strong> ${techStack}</p>
+      <p><strong>Company:</strong> ${request.companyName || 'Not specified'}</p>
+      <p><strong>Role Type:</strong> ${request.roleType || 'Not specified'}</p>
+      <p><strong>Salary Offer:</strong> ${request.salaryOffer || 'Not specified'}</p>
+      <p><strong>Location:</strong> ${request.location || 'Not specified'}</p>
       <p><strong>Message:</strong></p>
       <p>${request.message}</p>
       <p><strong>Received:</strong> ${request.createdAt.toLocaleString()}</p>
@@ -179,7 +204,7 @@ async function sendHireRequestEmail(request: HireRequestData): Promise<void> {
       body: JSON.stringify({
         from: 'Portfolio <noreply@portfolio.com>',
         to: config.email.adminEmail,
-        subject: `New Hire Request: ${request.projectName}`,
+        subject: `New Hire Request from ${request.candidateName || 'Candidate'} - ${request.companyName || 'Company'}`,
         html: emailBody,
       }),
     });
@@ -197,10 +222,6 @@ async function sendHireRequestEmail(request: HireRequestData): Promise<void> {
 
 async function sendHireRequestSlack(request: HireRequestData): Promise<void> {
   try {
-    const techStack = Array.isArray(request.techStack)
-      ? request.techStack.map((tech) => `\`${tech}\``).join(', ')
-      : JSON.stringify(request.techStack);
-
     const message = {
       blocks: [
         {
@@ -216,20 +237,34 @@ async function sendHireRequestSlack(request: HireRequestData): Promise<void> {
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Project:*\n${request.projectName}`,
+              text: `*Candidate:*\n${request.candidateName || 'Not specified'}`,
             },
             {
               type: 'mrkdwn',
               text: `*Email:*\n${request.email}`,
             },
+            {
+              type: 'mrkdwn',
+              text: `*Company:*\n${request.companyName || 'Not specified'}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Role:*\n${request.roleType || 'Not specified'}`,
+            },
           ],
         },
         {
           type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Tech Stack:*\n${techStack}`,
-          },
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Salary Offer:*\n${request.salaryOffer || 'Not specified'}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Location:*\n${request.location || 'Not specified'}`,
+            },
+          ],
         },
         {
           type: 'section',

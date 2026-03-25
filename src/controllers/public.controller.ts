@@ -8,15 +8,27 @@ export const createServiceInquiry = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { clientName, email, serviceType, budgetRange, requirements } = req.body;
+    const { 
+      clientName, 
+      email, 
+      serviceType,
+      companyName, 
+      phoneNumber, 
+      budgetRange, 
+      timeline, 
+      projectDetails 
+    } = req.body;
 
     const inquiry = await prisma.serviceInquiry.create({
       data: {
         clientName,
         email,
         serviceType,
+        companyName,
+        phoneNumber,
         budgetRange,
-        requirements,
+        timeline,
+        projectDetails,
         status: 'NEW',
       },
     });
@@ -50,13 +62,24 @@ export const createHireRequest = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { projectName, techStack, email, message } = req.body;
+    const { 
+      candidateName, 
+      email, 
+      companyName, 
+      roleType, 
+      salaryOffer, 
+      location,
+      message 
+    } = req.body;
 
     const hireRequest = await prisma.hireRequest.create({
       data: {
-        projectName,
-        techStack,
+        candidateName,
         email,
+        companyName,
+        roleType,
+        salaryOffer,
+        location,
         message,
         status: 'NEW',
       },

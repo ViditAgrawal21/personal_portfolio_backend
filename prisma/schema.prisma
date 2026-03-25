@@ -1,6 +1,3 @@
-// Prisma Schema for Portfolio Backend
-// Designed to work with Supabase PostgreSQL
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,31 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Admin User Model
 model AdminUser {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique @db.VarChar(255)
-  passwordHash  String   @map("password_hash") @db.Text
-  role          AdminRole @default(ADMIN)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash")
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([email])
   @@map("admin_users")
 }
 
-// Service Inquiry Model
 model ServiceInquiry {
-  id            String         @id @default(uuid()) @db.Uuid
-  clientName    String         @map("client_name") @db.VarChar(255)
-  email         String         @db.VarChar(255)
-  serviceType   String         @map("service_type") @db.VarChar(100)
-  budgetRange   String?        @map("budget_range") @db.VarChar(50)
-  requirements  String         @db.Text
-  status        InquiryStatus  @default(NEW)
-  internalNotes String?        @map("internal_notes") @db.Text
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String        @id @default(uuid()) @db.Uuid
+  clientName    String        @map("client_name") @db.VarChar(255)
+  email         String        @db.VarChar(255)
+  serviceType   String?       @map("service_type") @db.VarChar(100)  // Made optional for migration
+  companyName   String?       @map("company_name") @db.VarChar(255)
+  phoneNumber   String?       @map("phone_number") @db.VarChar(50)
+  budgetRange   String?       @map("budget_range") @db.VarChar(100)
+  timeline      String?       @map("timeline") @db.VarChar(255)
+  requirements  String?       // Made optional for migration
+  projectDetails String?      @map("project_details") @db.Text
+  status        InquiryStatus @default(NEW)
+  internalNotes String?       @map("internal_notes")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([status])
   @@index([createdAt(sort: Desc)])
@@ -42,17 +41,21 @@ model ServiceInquiry {
   @@map("service_inquiries")
 }
 
-// Hire Request Model
 model HireRequest {
-  id            String      @id @default(uuid()) @db.Uuid
-  projectName   String      @map("project_name") @db.VarChar(255)
-  techStack     Json        @default("[]") @map("tech_stack") @db.JsonB
-  email         String      @db.VarChar(255)
-  message       String      @db.Text
-  status        HireStatus  @default(NEW)
-  internalNotes String?     @map("internal_notes") @db.Text
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String     @id @default(uuid()) @db.Uuid
+  project_name  String?    @db.VarChar(255)  // Made optional for migration
+  candidateName String?    @map("candidate_name") @db.VarChar(255)
+  companyName   String?    @map("company_name") @db.VarChar(255)
+  roleType      String?    @map("role_type") @db.VarChar(255)
+  tech_stack    Json?      @default("[]")
+  salaryOffer   String?    @map("salary_offer") @db.VarChar(255)
+  location      String?    @db.VarChar(255)
+  email         String     @db.VarChar(255)
+  message       String
+  status        HireStatus @default(NEW)
+  internalNotes String?    @map("internal_notes")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([status])
   @@index([createdAt(sort: Desc)])
@@ -60,7 +63,127 @@ model HireRequest {
   @@map("hire_requests")
 }
 
-// Enums
+model About {
+  id                 String   @id @default(uuid()) @db.Uuid
+  fullName           String   @map("full_name") @db.VarChar(255)
+  title              String   @db.VarChar(255)
+  bio                String
+  email              String   @db.VarChar(255)
+  phone              String?  @db.VarChar(50)
+  location           String?  @db.VarChar(255)
+  resumeUrl          String?  @map("resume_url")
+  githubUrl          String?  @map("github_url")
+  linkedinUrl        String?  @map("linkedin_url")
+  twitterUrl         String?  @map("twitter_url")
+  profileImageUrl    String?  @map("profile_image_url")
+  yearsOfExp         Int?     @default(0) @map("years_of_experience")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  availabilityStatus String?  @default("Open to opportunities") @map("availability_status") @db.VarChar(255)
+  hourlyRate         String?  @map("hourly_rate") @db.VarChar(50)
+  isAvailable        Boolean  @default(true) @map("is_available")
+
+  @@map("about")
+}
+
+model Service {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String   @db.VarChar(255)
+  description  String
+  icon         String?  @db.VarChar(100)
+  features     Json?    @default("[]")
+  pricing      String?  @db.VarChar(100)
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("services")
+}
+
+model Project {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String   @db.VarChar(255)
+  description  String
+  techStack    Json     @default("[]") @map("tech_stack")
+  imageUrl     String?  @map("image_url")
+  demoUrl      String?  @map("demo_url")
+  githubUrl    String?  @map("github_url")
+  category     String?  @db.VarChar(100)
+  isFeatured   Boolean  @default(false) @map("is_featured")
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([displayOrder])
+  @@index([category])
+  @@map("projects")
+}
+
+model TechStack {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  category     String   @db.VarChar(100)
+  icon         String?  @db.VarChar(100)
+  proficiency  Int      @default(50)
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive])
+  @@index([category])
+  @@index([displayOrder])
+  @@map("tech_stack")
+}
+
+model Experience {
+  id           String    @id @default(uuid()) @db.Uuid
+  company      String    @db.VarChar(255)
+  position     String    @db.VarChar(255)
+  description  String
+  startDate    DateTime  @map("start_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  isCurrent    Boolean   @default(false) @map("is_current")
+  location     String?   @db.VarChar(255)
+  companyUrl   String?   @map("company_url")
+  techUsed     Json?     @default("[]") @map("tech_used")
+  isActive     Boolean   @default(true) @map("is_active")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("experience")
+}
+
+model Education {
+  id           String    @id @default(uuid()) @db.Uuid
+  institution  String    @db.VarChar(255)
+  degree       String    @db.VarChar(255)
+  field        String    @db.VarChar(255)
+  startDate    DateTime  @map("start_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  isCurrent    Boolean   @default(false) @map("is_current")
+  grade        String?   @db.VarChar(50)
+  location     String?   @db.VarChar(255)
+  description  String?
+  isActive     Boolean   @default(true) @map("is_active")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("education")
+}
+
 enum AdminRole {
   SUPER_ADMIN @map("super_admin")
   ADMIN       @map("admin")
@@ -86,135 +209,4 @@ enum HireStatus {
   DECLINED  @map("declined")
 
   @@map("hire_status")
-}
-
-// =====================================================
-// PORTFOLIO CONTENT MODELS
-// =====================================================
-
-// About Section - Single record
-model About {
-  id              String   @id @default(uuid()) @db.Uuid
-  fullName        String   @map("full_name") @db.VarChar(255)
-  title           String   @db.VarChar(255)
-  bio             String   @db.Text
-  email           String   @db.VarChar(255)
-  phone           String?  @db.VarChar(50)
-  location        String?  @db.VarChar(255)
-  resumeUrl       String?  @map("resume_url") @db.Text
-  githubUrl       String?  @map("github_url") @db.Text
-  linkedinUrl     String?  @map("linkedin_url") @db.Text
-  twitterUrl      String?  @map("twitter_url") @db.Text
-  profileImageUrl String?  @map("profile_image_url") @db.Text
-  yearsOfExp      Int?     @default(0) @map("years_of_experience")
-  isAvailable     Boolean  @default(true) @map("is_available")
-  availabilityStatus String? @default("Open to opportunities") @map("availability_status") @db.VarChar(255)
-  hourlyRate      String?  @map("hourly_rate") @db.VarChar(50)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@map("about")
-}
-
-// Services Offered
-model Service {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String   @db.VarChar(255)
-  description String   @db.Text
-  icon        String?  @db.VarChar(100) // Icon name (e.g., 'Code', 'Palette', 'Server')
-  features    Json?    @default("[]") @db.JsonB // Array of feature strings
-  pricing     String?  @db.VarChar(100) // e.g., "Starting at $X" or "Custom"
-  isActive    Boolean  @default(true) @map("is_active")
-  displayOrder Int     @default(0) @map("display_order")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([isActive])
-  @@index([displayOrder])
-  @@map("services")
-}
-
-// Portfolio Projects
-model Project {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String   @db.VarChar(255)
-  description String   @db.Text
-  techStack   Json     @default("[]") @map("tech_stack") @db.JsonB // Array of tech names
-  imageUrl    String?  @map("image_url") @db.Text
-  demoUrl     String?  @map("demo_url") @db.Text
-  githubUrl   String?  @map("github_url") @db.Text
-  category    String?  @db.VarChar(100) // e.g., "Web App", "Mobile", "API"
-  isFeatured  Boolean  @default(false) @map("is_featured")
-  isActive    Boolean  @default(true) @map("is_active")
-  displayOrder Int     @default(0) @map("display_order")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([isActive])
-  @@index([isFeatured])
-  @@index([displayOrder])
-  @@index([category])
-  @@map("projects")
-}
-
-// Tech Stack / Skills
-model TechStack {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String   @db.VarChar(100)
-  category     String   @db.VarChar(100) // e.g., "Frontend", "Backend", "Database", "Tools"
-  icon         String?  @db.VarChar(100) // Icon name or URL
-  proficiency  Int      @default(50) @db.Integer // 0-100
-  isActive     Boolean  @default(true) @map("is_active")
-  displayOrder Int      @default(0) @map("display_order")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([isActive])
-  @@index([category])
-  @@index([displayOrder])
-  @@map("tech_stack")
-}
-
-// Work Experience
-model Experience {
-  id           String   @id @default(uuid()) @db.Uuid
-  company      String   @db.VarChar(255)
-  position     String   @db.VarChar(255)
-  description  String   @db.Text
-  startDate    DateTime @map("start_date") @db.Date
-  endDate      DateTime? @map("end_date") @db.Date
-  isCurrent    Boolean  @default(false) @map("is_current")
-  location     String?  @db.VarChar(255)
-  companyUrl   String?  @map("company_url") @db.Text
-  techUsed     Json?    @default("[]") @map("tech_used") @db.JsonB // Array of tech names
-  isActive     Boolean  @default(true) @map("is_active")
-  displayOrder Int      @default(0) @map("display_order")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([isActive])
-  @@index([displayOrder])
-  @@map("experience")
-}
-
-// Education
-model Education {
-  id           String   @id @default(uuid()) @db.Uuid
-  institution  String   @db.VarChar(255)
-  degree       String   @db.VarChar(255)
-  field        String   @db.VarChar(255)
-  startDate    DateTime @map("start_date") @db.Date
-  endDate      DateTime? @map("end_date") @db.Date
-  isCurrent    Boolean  @default(false) @map("is_current")
-  grade        String?  @db.VarChar(50)
-  location     String?  @db.VarChar(255)
-  description  String?  @db.Text
-  isActive     Boolean  @default(true) @map("is_active")
-  displayOrder Int      @default(0) @map("display_order")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([isActive])
-  @@index([displayOrder])
-  @@map("education")
 }

@@ -11,31 +11,56 @@ export const serviceInquirySchema = z.object({
     .max(255, 'Email too long'),
   serviceType: z
     .string()
-    .min(2, 'Service type required')
-    .max(100, 'Service type too long'),
+    .min(2, 'Service type must be at least 2 characters')
+    .max(100, 'Service type too long')
+    .optional(),
+  companyName: z
+    .string()
+    .max(255, 'Company name too long')
+    .optional(),
+  phoneNumber: z
+    .string()
+    .max(50, 'Phone number too long')
+    .optional(),
   budgetRange: z
     .string()
-    .max(50, 'Budget range too long')
+    .max(100, 'Budget range too long')
     .optional(),
-  requirements: z
+  timeline: z
     .string()
-    .min(10, 'Requirements must be at least 10 characters')
-    .max(5000, 'Requirements too long'),
+    .max(255, 'Timeline too long')
+    .optional(),
+  projectDetails: z
+    .string()
+    .min(10, 'Project details must be at least 10 characters')
+    .max(5000, 'Project details too long'),
 });
 
 export const hireRequestSchema = z.object({
-  projectName: z
+  candidateName: z
     .string()
-    .min(2, 'Project name must be at least 2 characters')
-    .max(255, 'Project name too long'),
-  techStack: z
-    .array(z.string())
-    .min(1, 'At least one technology required')
-    .max(20, 'Too many technologies'),
+    .min(2, 'Name must be at least 2 characters')
+    .max(255, 'Name too long'),
   email: z
     .string()
     .email('Invalid email address')
     .max(255, 'Email too long'),
+  companyName: z
+    .string()
+    .min(2, 'Company name must be at least 2 characters')
+    .max(255, 'Company name too long'),
+  roleType: z
+    .string()
+    .min(2, 'Role type must be at least 2 characters')
+    .max(255, 'Role type too long'),
+  salaryOffer: z
+    .string()
+    .max(255, 'Salary offer too long')
+    .optional(),
+  location: z
+    .string()
+    .max(255, 'Location too long')
+    .optional(),
   message: z
     .string()
     .min(10, 'Message must be at least 10 characters')

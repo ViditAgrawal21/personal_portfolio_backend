@@ -327,7 +327,7 @@ export const getStats = async (
         select: {
           id: true,
           clientName: true,
-          serviceType: true,
+          companyName: true,
           status: true,
           createdAt: true,
         },
@@ -337,7 +337,8 @@ export const getStats = async (
         take: 5,
         select: {
           id: true,
-          projectName: true,
+          candidateName: true,
+          companyName: true,
           status: true,
           createdAt: true,
         },
@@ -384,7 +385,7 @@ export const exportInquiriesCSV = async (
     });
 
     // CSV Header
-    const csvHeader = 'ID,Client Name,Email,Service Type,Budget Range,Status,Created At\n';
+    const csvHeader = 'ID,Client Name,Email,Company Name,Phone Number,Budget Range,Timeline,Status,Created At\n';
 
     // CSV Rows
     const csvRows = inquiries
@@ -393,8 +394,10 @@ export const exportInquiriesCSV = async (
           inquiry.id,
           `"${inquiry.clientName}"`,
           inquiry.email,
-          `"${inquiry.serviceType}"`,
+          `"${inquiry.companyName || 'Not specified'}"`,
+          inquiry.phoneNumber || '',
           inquiry.budgetRange || '',
+          inquiry.timeline || '',
           inquiry.status,
           inquiry.createdAt.toISOString(),
         ].join(',')
@@ -422,20 +425,18 @@ export const exportHireRequestsCSV = async (
     });
 
     // CSV Header
-    const csvHeader = 'ID,Project Name,Email,Tech Stack,Status,Created At\n';
+    const csvHeader = 'ID,Candidate Name,Email,Company Name,Role Type,Salary Offer,Status,Created At\n';
 
     // CSV Rows
     const csvRows = requests
       .map((request) => {
-        const techStack = Array.isArray(request.techStack)
-          ? request.techStack.join('; ')
-          : JSON.stringify(request.techStack);
-        
         return [
           request.id,
-          `"${request.projectName}"`,
+          `"${request.candidateName}"`,
           request.email,
-          `"${techStack}"`,
+          `"${request.companyName}"`,
+          `"${request.roleType}"`,
+          `"${request.salaryOffer || 'Not specified'}"`,
           request.status,
           request.createdAt.toISOString(),
         ].join(',');
@@ -538,18 +539,26 @@ export const exportInquiryPDF = async (
   <div class="section">
     <h2>Service Details</h2>
     <div class="info-row">
-      <span class="label">Service Type:</span>
-      <span class="value">${inquiry.serviceType}</span>
+      <span class="label">Company:</span>
+      <span class="value">${inquiry.companyName || 'Not specified'}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Phone Number:</span>
+      <span class="value">${inquiry.phoneNumber || 'Not specified'}</span>
     </div>
     <div class="info-row">
       <span class="label">Budget Range:</span>
       <span class="value">${inquiry.budgetRange || 'Not specified'}</span>
     </div>
+    <div class="info-row">
+      <span class="label">Timeline:</span>
+      <span class="value">${inquiry.timeline || 'Not specified'}</span>
+    </div>
   </div>
 
   <div class="section">
-    <h2>Requirements</h2>
-    <div class="requirements">${inquiry.requirements}</div>
+    <h2>Project Details</h2>
+    <div class="requirements">${inquiry.projectDetails}</div>
   </div>
 
   ${inquiry.internalNotes ? `
@@ -591,17 +600,13 @@ export const exportHireRequestPDF = async (
       return;
     }
 
-    const techStack = Array.isArray(request.techStack)
-      ? request.techStack.join(', ')
-      : JSON.stringify(request.techStack);
-
     // Generate simple HTML that can be printed as PDF
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Hire Request - ${request.projectName}</title>
+  <meta charset=\"UTF-8\">
+  <title>Hire Request - ${request.candidateName}</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
     h1 { color: #333; border-bottom: 2px solid #28a745; padding-bottom: 10px; }
@@ -662,10 +667,14 @@ export const exportHireRequestPDF = async (
   </div>
 
   <div class="section">
-    <h2>Project Information</h2>
+    <h2>Contact Information</h2>
     <div class="info-row">
-      <span class="label">Project Name:</span>
-      <span class="value">${request.projectName}</span>
+      <span class="label">Candidate Name:</span>
+      <span class="value">${request.candidateName}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Company:</span>
+      <span class="value">${request.companyName}</span>
     </div>
     <div class="info-row">
       <span class="label">Client Email:</span>
@@ -674,8 +683,15 @@ export const exportHireRequestPDF = async (
   </div>
 
   <div class="section">
-    <h2>Tech Stack</h2>
-    <div class="value">${techStack}</div>
+    <h2>Position Details</h2>
+    <div class="info-row">
+      <span class="label">Role Type:</span>
+      <span class="value">${request.roleType}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Salary Offer:</span>
+      <span class="value">${request.salaryOffer || 'Not specified'}</span>
+    </div>
   </div>
 
   <div class="section">
@@ -731,7 +747,7 @@ export const sendInquiryReply = async (
     // Send reply email
     await sendReplyEmail({
       to: inquiry.email,
-      subject: subject || `Re: Your Service Inquiry - ${inquiry.serviceType}`,
+      subject: subject || `Re: Your Service Inquiry - Project Details`,
       message,
       clientName: inquiry.clientName,
     });
@@ -770,13 +786,13 @@ export const sendHireRequestReply = async (
       return;
     }
 
-    // Extract client name from email or use project name
-    const clientName = request.email.split('@')[0];
+    // Use candidate name or extract from email as fallback
+    const clientName = request.candidateName || request.email.split('@')[0];
 
     // Send reply email
     await sendReplyEmail({
       to: request.email,
-      subject: subject || `Re: Your Hire Request - ${request.projectName}`,
+      subject: subject || `Re: Your Hire Request - ${request.roleType}`,
       message,
       clientName,
     });
