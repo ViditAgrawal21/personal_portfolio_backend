@@ -4,28 +4,14 @@ import prisma from '../config/database';
 import { logger } from '../utils/logger';
 import { comparePassword, generateToken } from '../utils/auth';
 import { sendReplyEmail } from '../services/notification.service';
+import { supabase, STORAGE_BUCKET } from '../config/supabase';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import * as XLSX from 'xlsx';
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const uploadDir = 'public/assets/uploads';
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer with memory storage for Supabase uploads
+const storage = multer.memoryStorage();
 
-// File filter for images only
 const fileFilter = (_req: any, file: any, cb: any) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -384,34 +370,42 @@ export const exportInquiriesCSV = async (
       orderBy: { createdAt: 'desc' },
     });
 
-    // CSV Header
-    const csvHeader = 'ID,Client Name,Email,Company Name,Phone Number,Budget Range,Timeline,Status,Created At\n';
+    const data = inquiries.map((inquiry) => ({
+      'ID': inquiry.id,
+      'Client Name': inquiry.clientName,
+      'Email': inquiry.email,
+      'Company Name': inquiry.companyName || 'Not specified',
+      'Phone Number': inquiry.phoneNumber || '',
+      'Service Type': inquiry.serviceType || '',
+      'Budget Range': inquiry.budgetRange || '',
+      'Timeline': inquiry.timeline || '',
+      'Project Details': inquiry.projectDetails || '',
+      'Status': inquiry.status,
+      'Internal Notes': inquiry.internalNotes || '',
+      'Created At': inquiry.createdAt.toISOString().split('T')[0],
+      'Updated At': inquiry.updatedAt.toISOString().split('T')[0],
+    }));
 
-    // CSV Rows
-    const csvRows = inquiries
-      .map((inquiry) =>
-        [
-          inquiry.id,
-          `"${inquiry.clientName}"`,
-          inquiry.email,
-          `"${inquiry.companyName || 'Not specified'}"`,
-          inquiry.phoneNumber || '',
-          inquiry.budgetRange || '',
-          inquiry.timeline || '',
-          inquiry.status,
-          inquiry.createdAt.toISOString(),
-        ].join(',')
-      )
-      .join('\n');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
 
-    const csv = csvHeader + csvRows;
+    // Auto-fit column widths
+    const colWidths = Object.keys(data[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...data.map((row: any) => String(row[key] || '').length)).toString().length > 40 ? 40 : Math.max(key.length + 2, ...data.map((row: any) => String(row[key] || '').substring(0, 40).length + 2)),
+    }));
+    ws['!cols'] = colWidths;
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=inquiries.csv');
-    res.send(csv);
+    XLSX.utils.book_append_sheet(wb, ws, 'Service Inquiries');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const date = new Date().toISOString().split('T')[0];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=service-inquiries-${date}.xlsx`);
+    res.send(Buffer.from(buffer));
   } catch (error) {
-    logger.error('Error exporting CSV:', error);
-    res.status(500).json({ error: 'Failed to export CSV' });
+    logger.error('Error exporting inquiries:', error);
+    res.status(500).json({ error: 'Failed to export inquiries' });
   }
 };
 
@@ -424,33 +418,43 @@ export const exportHireRequestsCSV = async (
       orderBy: { createdAt: 'desc' },
     });
 
-    // CSV Header
-    const csvHeader = 'ID,Candidate Name,Email,Company Name,Role Type,Salary Offer,Status,Created At\n';
+    const data = requests.map((request) => ({
+      'ID': request.id,
+      'Project Name': request.project_name || '',
+      'Candidate Name': request.candidateName || '',
+      'Company Name': request.companyName || '',
+      'Email': request.email,
+      'Role Type': request.roleType || '',
+      'Tech Stack': Array.isArray(request.tech_stack) ? (request.tech_stack as string[]).join(', ') : '',
+      'Salary Offer': request.salaryOffer || 'Not specified',
+      'Location': request.location || '',
+      'Message': request.message,
+      'Status': request.status,
+      'Internal Notes': request.internalNotes || '',
+      'Created At': request.createdAt.toISOString().split('T')[0],
+      'Updated At': request.updatedAt.toISOString().split('T')[0],
+    }));
 
-    // CSV Rows
-    const csvRows = requests
-      .map((request) => {
-        return [
-          request.id,
-          `"${request.candidateName}"`,
-          request.email,
-          `"${request.companyName}"`,
-          `"${request.roleType}"`,
-          `"${request.salaryOffer || 'Not specified'}"`,
-          request.status,
-          request.createdAt.toISOString(),
-        ].join(',');
-      })
-      .join('\n');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
 
-    const csv = csvHeader + csvRows;
+    // Auto-fit column widths
+    const colWidths = Object.keys(data[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...data.map((row: any) => String(row[key] || '').length)).toString().length > 40 ? 40 : Math.max(key.length + 2, ...data.map((row: any) => String(row[key] || '').substring(0, 40).length + 2)),
+    }));
+    ws['!cols'] = colWidths;
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=hire-requests.csv');
-    res.send(csv);
+    XLSX.utils.book_append_sheet(wb, ws, 'Hire Requests');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const date = new Date().toISOString().split('T')[0];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=hire-requests-${date}.xlsx`);
+    res.send(Buffer.from(buffer));
   } catch (error) {
-    logger.error('Error exporting hire requests CSV:', error);
-    res.status(500).json({ error: 'Failed to export CSV' });
+    logger.error('Error exporting hire requests:', error);
+    res.status(500).json({ error: 'Failed to export hire requests' });
   }
 };
 
@@ -827,10 +831,31 @@ export const uploadFile = async (
       return;
     }
 
-    const fileUrl = `/assets/uploads/${req.file.filename}`;
+    const ext = path.extname(req.file.originalname);
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filePath = `uploads/${filename}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      logger.error('Supabase storage upload error:', uploadError);
+      res.status(500).json({ success: false, error: 'Failed to upload file' });
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(filePath);
+
+    const fileUrl = publicUrlData.publicUrl;
     
     logger.info('File uploaded successfully', {
-      filename: req.file.filename,
+      filename,
       originalName: req.file.originalname,
       size: req.file.size,
       url: fileUrl,
@@ -840,7 +865,7 @@ export const uploadFile = async (
       success: true,
       data: {
         url: fileUrl,
-        filename: req.file.filename,
+        filename,
         originalName: req.file.originalname,
         size: req.file.size,
       },

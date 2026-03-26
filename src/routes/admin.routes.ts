@@ -36,6 +36,7 @@ router.post('/login', authRateLimiter, validate(loginSchema), login);
 // Admin - Service Inquiries
 router.get('/inquiries', authenticate, getInquiries);
 router.get('/inquiries/export/csv', authenticate, exportInquiriesCSV);
+router.get('/inquiries/export/excel', authenticate, exportInquiriesCSV);
 router.get('/inquiries/:id', authenticate, getInquiryById);
 router.get('/inquiries/:id/pdf', authenticate, exportInquiryPDF);
 router.patch(
@@ -49,6 +50,7 @@ router.patch(
 // Admin - Hire Requests
 router.get('/hire-requests', authenticate, getHireRequests);
 router.get('/hire-requests/export/csv', authenticate, exportHireRequestsCSV);
+router.get('/hire-requests/export/excel', authenticate, exportHireRequestsCSV);
 router.get('/hire-requests/:id', authenticate, getHireRequestById);
 router.get('/hire-requests/:id/pdf', authenticate, exportHireRequestPDF);
 router.patch(
