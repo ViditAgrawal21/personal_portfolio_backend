@@ -1,4 +1,14 @@
 import { z } from 'zod';
+import { config } from '../config';
+
+// Only accept image URLs from Supabase Storage (uploaded via /api/admin/upload)
+const supabaseImageUrl = z.string()
+  .refine(
+    (url) => url.startsWith(`${config.supabase.url}/storage/v1/object/public/`),
+    'Only uploaded images are accepted. Use the /api/admin/upload endpoint first.'
+  )
+  .optional()
+  .or(z.literal(''));
 
 export const serviceInquirySchema = z.object({
   clientName: z
@@ -97,7 +107,7 @@ export const aboutSchema = z.object({
   githubUrl: z.string().url().optional().or(z.literal('')),
   linkedinUrl: z.string().url().optional().or(z.literal('')),
   twitterUrl: z.string().url().optional().or(z.literal('')),
-  profileImageUrl: z.string().url().optional().or(z.literal('')),
+  profileImageUrl: supabaseImageUrl,
   yearsOfExp: z.number().int().min(0).max(100).optional(),
 });
 
@@ -115,7 +125,7 @@ export const projectSchema = z.object({
   title: z.string().min(2).max(255),
   description: z.string().min(10).max(5000),
   techStack: z.array(z.string()).min(1, 'At least one technology required'),
-  imageUrl: z.string().url().optional().or(z.literal('')),
+  imageUrl: supabaseImageUrl,
   demoUrl: z.string().url().optional().or(z.literal('')),
   githubUrl: z.string().url().optional().or(z.literal('')),
   category: z.string().max(100).optional(),
