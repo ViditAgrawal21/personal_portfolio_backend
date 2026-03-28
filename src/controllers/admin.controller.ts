@@ -8,6 +8,7 @@ import { supabase, STORAGE_BUCKET } from '../config/supabase';
 import multer from 'multer';
 import path from 'path';
 import * as XLSX from 'xlsx';
+import PDFDocument from 'pdfkit';
 
 // Configure multer with memory storage for Supabase uploads
 const storage = multer.memoryStorage();
@@ -474,114 +475,64 @@ export const exportInquiryPDF = async (
       return;
     }
 
-    // Generate simple HTML that can be printed as PDF
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Service Inquiry - ${inquiry.clientName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-    .info-row { margin: 15px 0; }
-    .label { font-weight: bold; color: #555; }
-    .value { color: #333; }
-    .section { margin: 30px 0; }
-    .status { 
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-weight: bold;
-      text-transform: uppercase;
+// Generate real PDF using PDFKit
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=inquiry-${inquiry.id.substring(0,6)}.pdf`);
+
+    const doc = new PDFDocument({ margin: 50 });
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(20).text('Service Inquiry Details', { align: 'center', underline: true });
+    doc.moveDown(2);
+
+    // Overview
+    doc.fontSize(14).text('Overview', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Inquiry ID: ${inquiry.id}`);
+    doc.text(`Status: ${inquiry.status.replace('_', ' ')}`);
+    doc.text(`Received: ${inquiry.createdAt.toLocaleString()}`);
+    doc.moveDown(1.5);
+
+    // Client Information
+    doc.fontSize(14).text('Client Information', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Name: ${inquiry.clientName}`);
+    doc.text(`Email: ${inquiry.email}`);
+    doc.text(`Company: ${inquiry.companyName || 'Not specified'}`);
+    doc.text(`Phone: ${inquiry.phoneNumber || 'Not specified'}`);
+    doc.moveDown(1.5);
+
+    // Service Details
+    doc.fontSize(14).text('Service Details', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Service Type: ${inquiry.serviceType || 'Not specified'}`);
+    doc.text(`Budget Range: ${inquiry.budgetRange || 'Not specified'}`);
+    doc.text(`Timeline: ${inquiry.timeline || 'Not specified'}`);
+    doc.moveDown(1.5);
+
+    // Project Details
+    doc.fontSize(14).text('Project Details', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(inquiry.projectDetails || 'No details provided');
+    doc.moveDown(1.5);
+
+    // Internal Notes
+    if (inquiry.internalNotes) {
+      doc.fontSize(14).text('Internal Notes', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(inquiry.internalNotes);
+      doc.moveDown(1.5);
     }
-    .status-new { background-color: #e3f2fd; color: #1976d2; }
-    .status-in_progress { background-color: #fff3e0; color: #f57c00; }
-    .status-contacted { background-color: #f3e5f5; color: #7b1fa2; }
-    .status-converted { background-color: #e8f5e9; color: #388e3c; }
-    .status-rejected { background-color: #ffebee; color: #c62828; }
-    .requirements { 
-      background-color: #f5f5f5; 
-      padding: 20px; 
-      border-radius: 8px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-    }
-    .footer { margin-top: 50px; text-align: center; color: #999; font-size: 12px; }
-  </style>
-</head>
-<body>
-  <h1>Service Inquiry Details</h1>
-  
-  <div class="section">
-    <div class="info-row">
-      <span class="label">Inquiry ID:</span>
-      <span class="value">${inquiry.id}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Status:</span>
-      <span class="status status-${inquiry.status}">${inquiry.status.replace('_', ' ')}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Received:</span>
-      <span class="value">${inquiry.createdAt.toLocaleString()}</span>
-    </div>
-  </div>
 
-  <div class="section">
-    <h2>Client Information</h2>
-    <div class="info-row">
-      <span class="label">Name:</span>
-      <span class="value">${inquiry.clientName}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Email:</span>
-      <span class="value">${inquiry.email}</span>
-    </div>
-  </div>
+    // Footer
+    doc.save()
+       .moveTo(50, doc.page.height - 70)
+       .lineTo(doc.page.width - 50, doc.page.height - 70)
+       .stroke();
+    doc.fontSize(10).fillColor('gray').text(`Generated on ${new Date().toLocaleString()} | DevPort Admin Panel`, 50, doc.page.height - 55, { align: 'center', width: doc.page.width - 100 });
 
-  <div class="section">
-    <h2>Service Details</h2>
-    <div class="info-row">
-      <span class="label">Company:</span>
-      <span class="value">${inquiry.companyName || 'Not specified'}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Phone Number:</span>
-      <span class="value">${inquiry.phoneNumber || 'Not specified'}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Budget Range:</span>
-      <span class="value">${inquiry.budgetRange || 'Not specified'}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Timeline:</span>
-      <span class="value">${inquiry.timeline || 'Not specified'}</span>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Project Details</h2>
-    <div class="requirements">${inquiry.projectDetails}</div>
-  </div>
-
-  ${inquiry.internalNotes ? `
-  <div class="section">
-    <h2>Internal Notes</h2>
-    <div class="requirements">${inquiry.internalNotes}</div>
-  </div>
-  ` : ''}
-
-  <div class="footer">
-    Generated on ${new Date().toLocaleString()} | Portfolio Admin Panel
-  </div>
-</body>
-</html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Disposition', `inline; filename=inquiry-${inquiry.id}.html`);
-    res.send(html);
+    doc.end();
   } catch (error) {
     logger.error('Error generating inquiry PDF:', error);
     res.status(500).json({ error: 'Failed to generate PDF' });
@@ -604,122 +555,65 @@ export const exportHireRequestPDF = async (
       return;
     }
 
-    // Generate simple HTML that can be printed as PDF
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset=\"UTF-8\">
-  <title>Hire Request - ${request.candidateName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #333; border-bottom: 2px solid #28a745; padding-bottom: 10px; }
-    .info-row { margin: 15px 0; }
-    .label { font-weight: bold; color: #555; }
-    .value { color: #333; }
-    .section { margin: 30px 0; }
-    .status { 
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-weight: bold;
-      text-transform: uppercase;
+    // Generate real PDF using PDFKit
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=hire-request-${request.id.substring(0,6)}.pdf`);
+
+    const doc = new PDFDocument({ margin: 50 });
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(20).text('Hire Request Details', { align: 'center', underline: true });
+    doc.moveDown(2);
+
+    // Overview
+    doc.fontSize(14).text('Overview', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Request ID: ${request.id}`);
+    doc.text(`Status: ${request.status.replace('_', ' ')}`);
+    doc.text(`Received: ${request.createdAt.toLocaleString()}`);
+    doc.moveDown(1.5);
+
+    // Contact Information
+    doc.fontSize(14).text('Contact Information', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Candidate Name: ${request.candidateName}`);
+    doc.text(`Company: ${request.companyName}`);
+    doc.text(`Email: ${request.email}`);
+    doc.moveDown(1.5);
+
+    // Position Details
+    doc.fontSize(14).text('Position Details', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Role Type: ${request.roleType}`);
+    const techStack = Array.isArray(request.tech_stack) ? request.tech_stack.join(', ') : 'Not specified';
+    doc.text(`Tech Stack: ${techStack}`);
+    doc.text(`Salary Offer: ${request.salaryOffer || 'Not specified'}`);
+    doc.text(`Location: ${request.location || 'Not specified'}`);
+    doc.moveDown(1.5);
+
+    // Project Description
+    doc.fontSize(14).text('Message/Project Description', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(request.message || 'No message provided');
+    doc.moveDown(1.5);
+
+    // Internal Notes
+    if (request.internalNotes) {
+      doc.fontSize(14).text('Internal Notes', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(request.internalNotes);
+      doc.moveDown(1.5);
     }
-    .status-new { background-color: #e3f2fd; color: #1976d2; }
-    .status-reviewing { background-color: #fff3e0; color: #f57c00; }
-    .status-accepted { background-color: #e8f5e9; color: #388e3c; }
-    .status-declined { background-color: #ffebee; color: #c62828; }
-    .message { 
-      background-color: #f5f5f5; 
-      padding: 20px; 
-      border-radius: 8px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-    }
-    .tech-stack {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .tech-badge {
-      background-color: #007bff;
-      color: white;
-      padding: 5px 12px;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    .footer { margin-top: 50px; text-align: center; color: #999; font-size: 12px; }
-  </style>
-</head>
-<body>
-  <h1>Hire Request Details</h1>
-  
-  <div class="section">
-    <div class="info-row">
-      <span class="label">Request ID:</span>
-      <span class="value">${request.id}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Status:</span>
-      <span class="status status-${request.status}">${request.status.replace('_', ' ')}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Received:</span>
-      <span class="value">${request.createdAt.toLocaleString()}</span>
-    </div>
-  </div>
 
-  <div class="section">
-    <h2>Contact Information</h2>
-    <div class="info-row">
-      <span class="label">Candidate Name:</span>
-      <span class="value">${request.candidateName}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Company:</span>
-      <span class="value">${request.companyName}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Client Email:</span>
-      <span class="value">${request.email}</span>
-    </div>
-  </div>
+    // Footer
+    doc.save()
+       .moveTo(50, doc.page.height - 70)
+       .lineTo(doc.page.width - 50, doc.page.height - 70)
+       .stroke();
+    doc.fontSize(10).fillColor('gray').text(`Generated on ${new Date().toLocaleString()} | DevPort Admin Panel`, 50, doc.page.height - 55, { align: 'center', width: doc.page.width - 100 });
 
-  <div class="section">
-    <h2>Position Details</h2>
-    <div class="info-row">
-      <span class="label">Role Type:</span>
-      <span class="value">${request.roleType}</span>
-    </div>
-    <div class="info-row">
-      <span class="label">Salary Offer:</span>
-      <span class="value">${request.salaryOffer || 'Not specified'}</span>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Project Description</h2>
-    <div class="message">${request.message}</div>
-  </div>
-
-  ${request.internalNotes ? `
-  <div class="section">
-    <h2>Internal Notes</h2>
-    <div class="message">${request.internalNotes}</div>
-  </div>
-  ` : ''}
-
-  <div class="footer">
-    Generated on ${new Date().toLocaleString()} | Portfolio Admin Panel
-  </div>
-</body>
-</html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Disposition', `inline; filename=hire-request-${request.id}.html`);
-    res.send(html);
+    doc.end();
   } catch (error) {
     logger.error('Error generating hire request PDF:', error);
     res.status(500).json({ error: 'Failed to generate PDF' });
