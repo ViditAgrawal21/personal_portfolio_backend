@@ -662,7 +662,8 @@ export const sendInquiryReply = async (
     res.json({ success: true, message: 'Reply sent successfully' });
   } catch (error) {
     logger.error('Error sending inquiry reply:', error);
-    res.status(500).json({ success: false, error: 'Failed to send reply' });
+    const message = error instanceof Error ? error.message : 'Failed to send reply';
+    res.status(500).json({ success: false, error: message });
   }
 };
 
@@ -707,7 +708,8 @@ export const sendHireRequestReply = async (
     res.json({ success: true, message: 'Reply sent successfully' });
   } catch (error) {
     logger.error('Error sending hire request reply:', error);
-    res.status(500).json({ success: false, error: 'Failed to send reply' });
+    const message = error instanceof Error ? error.message : 'Failed to send reply';
+    res.status(500).json({ success: false, error: message });
   }
 };
 

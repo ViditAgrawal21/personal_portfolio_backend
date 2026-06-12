@@ -62,6 +62,10 @@ export const sendHireRequestNotification = async (
   await Promise.allSettled(promises);
 };
 
+function getSender(): string {
+  return `${config.email.fromName || 'Portfolio'} <${config.email.fromEmail || 'onboarding@resend.dev'}>`;
+}
+
 async function sendInquiryEmail(inquiry: InquiryData): Promise<void> {
   try {
     const emailBody = `
@@ -85,7 +89,7 @@ async function sendInquiryEmail(inquiry: InquiryData): Promise<void> {
         Authorization: `Bearer ${config.email.resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'Portfolio <noreply@portfolio.com>',
+        from: getSender(),
         to: config.email.adminEmail,
         subject: `New Service Inquiry from ${inquiry.clientName}`,
         html: emailBody,
@@ -202,7 +206,7 @@ async function sendHireRequestEmail(request: HireRequestData): Promise<void> {
         Authorization: `Bearer ${config.email.resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'Portfolio <noreply@portfolio.com>',
+        from: getSender(),
         to: config.email.adminEmail,
         subject: `New Hire Request from ${request.candidateName || 'Candidate'} - ${request.companyName || 'Company'}`,
         html: emailBody,
@@ -310,6 +314,7 @@ export const sendReplyEmail = async (data: ReplyEmailData): Promise<void> => {
   }
 
   try {
+    const sender = getSender();
     const emailBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <p>Hi ${data.clientName},</p>
@@ -330,7 +335,7 @@ export const sendReplyEmail = async (data: ReplyEmailData): Promise<void> => {
         Authorization: `Bearer ${config.email.resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `Portfolio <${config.email.adminEmail}>`,
+        from: sender,
         to: data.to,
         subject: data.subject,
         html: emailBody,

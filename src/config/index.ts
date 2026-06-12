@@ -47,6 +47,8 @@ export const config = {
   email: {
     resendApiKey: process.env.RESEND_API_KEY,
     adminEmail: process.env.ADMIN_EMAIL || 'admin@portfolio.com',
+    fromEmail: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+    fromName: process.env.EMAIL_FROM_NAME || 'Portfolio',
   },
 
   // Slack
